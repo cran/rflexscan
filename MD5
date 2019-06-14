@@ -1,0 +1,13 @@
+febfbed3c43771931c579cb0eb931d4c *DESCRIPTION
+fd8c164e23fd0bb69e62eb1caf0976c3 *NAMESPACE
+de089067bb214d971cc3a5d15b083302 *R/RcppExports.R
+491d990e5ae081c896aa0f924429e434 *R/flexscan.R
+f7d5699f1d4d01641807f0582f53302c *README.md
+80a6f843ea70c6b39b7f86dbc9f71f2b *man/choropleth.Rd
+1e1d9bedfd346c0d02846577895536b4 *man/flexscan.Rd
+fba983198eba95c35013dcb8902e873f *man/plot.rflexscan.Rd
+9d480c9d6e85095ae4a802b1b68214de *man/print.summary.rflexscan.Rd
+7d23262ce9568e29fd0d062e1f3e486b *man/rflexscan-package.Rd
+d018b83369ee3cb7eb12c17ef1485ce2 *man/summary.rflexscan.Rd
+53f42ba64554631cd4736a064075f060 *src/RcppExports.cpp
+bbe4358f78d5d9010e3945f318701a8a *src/flscan312.cpp
