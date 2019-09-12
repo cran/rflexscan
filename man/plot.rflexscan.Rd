@@ -5,10 +5,13 @@
 \title{Graph plotting of flexscan results}
 \usage{
 \method{plot}{rflexscan}(x, rank = 1:length(x$cluster), pval = 1,
-  vertexsize = max(x$coordinates[, 1]) - min(x$coordinates[, 1]),
-  xlab = colnames(x$coordinates)[1], ylab = colnames(x$coordinates)[2],
-  xlim = c(min(x$coordinates[, 1]), max(x$coordinates[, 1])),
-  ylim = c(min(x$coordinates[, 2]), max(x$coordinates[, 2])), ...)
+  vertexsize = max(x$input$coordinates[, 1]) - min(x$input$coordinates[,
+  1]), xlab = colnames(x$input$coordinates)[1],
+  ylab = colnames(x$input$coordinates)[2],
+  xlim = c(min(x$input$coordinates[, 1]), max(x$input$coordinates[, 1])),
+  ylim = c(min(x$input$coordinates[, 2]), max(x$input$coordinates[, 2])),
+  col = palette(), frame_color = "gray40", vertex_color = "white",
+  ...)
 }
 \arguments{
 \item{x}{An rflexscan object.}
@@ -26,6 +29,12 @@
 \item{xlim}{The x limits of the plot.}
 
 \item{ylim}{The y limits of the plot.}
+
+\item{col}{A vector of colors for each cluster.}
+
+\item{frame_color}{Color of frames in the graph.}
+
+\item{vertex_color}{Fill color of vertices that are not included in any clusters.}
 
 \item{...}{Other parameters to be passed to \link{plot.igraph} function.}
 }
@@ -46,12 +55,12 @@ data("nc.sids")
 expected <- nc.sids$BIR74 * sum(nc.sids$SID74) / sum(nc.sids$BIR74)
 
 # run FleXScan
-fls <- flexscan(x = nc.sids$x, y = nc.sids$y,
-                observed = nc.sids$SID74,
-                expected = expected,
-                name = rownames(nc.sids),
-                clustersize = 10,
-                nb = ncCR85.nb)
+fls <- rflexscan(x = nc.sids$x, y = nc.sids$y,
+                 observed = nc.sids$SID74,
+                 expected = expected,
+                 name = rownames(nc.sids),
+                 clustersize = 10,
+                 nb = ncCR85.nb)
 
 # display all clusters
 plot(fls)
@@ -64,5 +73,5 @@ plot(fls, pval = 0.05)
 
 }
 \seealso{
-\link{flexscan}
+\link{rflexscan}
 }

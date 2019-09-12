@@ -4,13 +4,15 @@
 \alias{choropleth}
 \title{Display choropleth map}
 \usage{
-choropleth(polygons, fls, region_color = "#F0F0F0",
+choropleth(polygons, fls, col = palette(), region_color = "#F0F0F0",
   rank = 1:length(fls$cluster), pval = 1, ...)
 }
 \arguments{
 \item{polygons}{A SpatialPolygonsDataFrame.}
 
 \item{fls}{An rflexscan object.}
+
+\item{col}{A vector of colors for each cluster.}
 
 \item{region_color}{Color of regions that are not included in any clusters.}
 
@@ -40,12 +42,12 @@ sids.shp <- readOGR(system.file("shapes/sids.shp", package="spData")[1])
 expected <- nc.sids$BIR74 * sum(nc.sids$SID74) / sum(nc.sids$BIR74)
 
 # run FleXScan
-fls <- flexscan(x = nc.sids$x, y = nc.sids$y,
-                observed = nc.sids$SID74,
-                expected = expected,
-                name = rownames(nc.sids),
-                clustersize = 10,
-                nb = ncCR85.nb)
+fls <- rflexscan(x = nc.sids$x, y = nc.sids$y,
+                 observed = nc.sids$SID74,
+                 expected = expected,
+                 name = rownames(nc.sids),
+                 clustersize = 10,
+                 nb = ncCR85.nb)
 
 # display all clusters
 choropleth(sids.shp, fls)
@@ -59,5 +61,5 @@ choropleth(sids.shp, fls, pval = 0.05)
 
 }
 \seealso{
-\link{flexscan}
+\link{rflexscan}
 }

@@ -2,7 +2,6 @@
 % Please edit documentation in R/flexscan.R
 \docType{package}
 \name{rflexscan-package}
-\alias{rflexscan}
 \alias{rflexscan-package}
 \title{Analyze spatial count data using the flexible spatial scan statistic}
 \description{
@@ -17,6 +16,8 @@ Takahashi (2005). This package designed for any of the following interrelated
   \item To perform geographical surveillance of disease, to detect areas of 
         significantly high rates.
 }
+This package implements a wrapper for the C routine used in the FleXScan 3.1.2 
+developed by Takahashi, Yokoyama, and Tango.
 }
 \references{
 \itemize{
@@ -29,5 +30,5 @@ Takahashi (2005). This package designed for any of the following interrelated
 }
 }
 \seealso{
-\code{\link{flexscan}}
+\code{\link{rflexscan}}
 }
