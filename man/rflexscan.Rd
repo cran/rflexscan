@@ -30,9 +30,9 @@ rflexscan(
 
 \item{y}{A vector of Y-coordinates.}
 
-\item{lat}{A vector of latitude.}
+\item{lat}{(DEPRECATED) A vector of latitude.}
 
-\item{lon}{A vector of longitude.}
+\item{lon}{(DEPRECATED) A vector of longitude.}
 
 \item{name}{A vector of names of each area.}
 
@@ -55,7 +55,8 @@ longitude. It is approximately 6370 km in Japan. This parameter is used when
 distance calculated using this parameter is not accurate. This feature is 
 implemented to maintain compatibility with FleXScan. It is recommended to 
 transform latitude and longitude onto the Cartesian coordinate system 
-beforehand and use the x and y parameters.}
+beforehand and use the \code{x} and \code{y} parameters that are projected
+coordinates.}
 
 \item{stattype}{Statistic type to be used (case-insensitive).
 \describe{
@@ -102,6 +103,12 @@ spatial scan statistic (1997), and detect spatial disease clusters.
 Centroid coordinates for each region should be specified EITHER by Cartesian 
 coordinates using arguments \code{x} and \code{y} or by latitudes and 
 longitudes using arguments \code{lat} and \code{lon}.
+Note that \code{lat} and \code{lon} are DEPRECATED due to accuracy issues.
+This feature is implemented to maintain compatibility with FleXScan software.
+We recommend to transform latitude and longitude onto the Cartesian 
+coordinate system beforehand (using \code{spTransform} function in sp package,
+for example) and use the \code{x} and \code{y} parameters that are projected
+coordinates.
 }
 \examples{
 # load sample data (North Carolina SIDS data)

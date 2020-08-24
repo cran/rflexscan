@@ -1,8 +1,8 @@
 Package: rflexscan
 Type: Package
 Title: The Flexible Spatial Scan Statistic
-Version: 0.3.0
-Date: 2020-06-19
+Version: 0.3.1
+Date: 2020-08-24
 Author: Takahiro Otani,
     Kunihiko Takahashi
 Maintainer: Takahiro Otani <otani@med.nagoya-cu.ac.jp>
@@ -17,9 +17,9 @@ Depends: R (>= 3.1.0)
 Imports: Rcpp, igraph, rgdal, grDevices, sp
 LinkingTo: Rcpp
 Suggests: knitr, rmarkdown, spdep, spData
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 Encoding: UTF-8
 NeedsCompilation: yes
-Packaged: 2020-06-23 04:42:53 UTC; tkhro
+Packaged: 2020-08-24 08:44:04 UTC; otani
 Repository: CRAN
-Date/Publication: 2020-06-23 12:30:03 UTC
+Date/Publication: 2020-08-24 10:40:03 UTC
