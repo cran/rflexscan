@@ -1,8 +1,8 @@
-c549555374283ba6d21d65f56d8be891 *DESCRIPTION
-447c9284bb974fddb6074239ba933611 *NAMESPACE
-0ba6a73bd904aac39fd53015a5a2c8f3 *NEWS.md
-accb8945c5e5b9544d5f44d6e2aff018 *R/RcppExports.R
-92ed7a1eee535c25b6699a76606a7580 *R/flexscan.R
+416967fd2ef854fd0a1466fdb4152e88 *DESCRIPTION
+c73bcbea9af6dcc494573571b4d5ec99 *NAMESPACE
+974446dd79198e06b860ec99b0c1eb6d *NEWS.md
+5140e29baac2fd432be649f99040abd4 *R/RcppExports.R
+f0a741493c4a28ca21533f8c6a9c7f4c *R/flexscan.R
 cb5051c60d71dc370d2b96703701e49c *README.md
 a50c9b29a97f9cf1aad9d6c40e316b6a *man/choropleth.Rd
 15e127f8f4fb3b69a3e4e8b0332b7bca *man/plot.rflexscan.Rd
@@ -10,7 +10,8 @@ a50c9b29a97f9cf1aad9d6c40e316b6a *man/choropleth.Rd
 406059cc24fbad3eaccd474cc8ff2041 *man/print.rflexscanCluster.Rd
 16a17011d3c9609481f2c31fa77bf931 *man/print.summary.rflexscan.Rd
 0f9a416aa51aec8b660a273a48e4ae5e *man/rflexscan-package.Rd
-3d1451a369c7882d19250f4642ee5487 *man/rflexscan.Rd
+019538d6cd97b83dddd754abc1b8437c *man/rflexscan.Rd
+c5d2ed77ca4e6ecb3378c75f7e19fbfb *man/runFleXScan.Rd
 9c62c65b79951439707587d5ea86fa44 *man/summary.rflexscan.Rd
 34a68250d91f942e29ed71156b03387e *src/RcppExports.cpp
-7d4b77d65c8d23e896e86c6d43b9a598 *src/flscan312.cpp
+cfbc06d960503a03eb60f442ad962fa0 *src/flscan312.cpp

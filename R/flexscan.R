@@ -138,6 +138,11 @@ flexscan.rantype <- c("MULTINOMIAL", "POISSON")
 #' @param verbose
 #' Print progress messages.
 #' 
+#' @param secondary
+#' The number of secondary clusters to be enumerated. If \code{NULL} is 
+#' specified (default), the search for secondary clusters is stopped when the 
+#' Monte Carlo p-value reaches 1.
+#' 
 #' @return 
 #' An \code{rflexscan} object which contains analysis results and specified
 #' parameters.
@@ -200,7 +205,8 @@ rflexscan <- function(x, y, lat, lon,
                       simcount=999,
                       rantype="MULTINOMIAL",
                       comments="",
-                      verbose=FALSE) {
+                      verbose=FALSE,
+                      secondary=NULL) {
   call <- match.call()
 
   stattype <- match.arg(toupper(stattype), flexscan.stattype)
@@ -263,6 +269,7 @@ rflexscan <- function(x, y, lat, lon,
   setting$cartesian <- as.integer(!latlon)
   setting$simcount <- simcount
   setting$rantype <- as.integer(rantype == "POISSON")
+  setting$secondary <- ifelse(is.null(secondary), -1, secondary)
       
   if (!verbose) {
     output <- capture.output({
@@ -654,7 +661,7 @@ plot.rflexscan <- function(x,
 #' choropleth(sids.shp, fls, pval = 0.05)
 #' }
 #' 
-#' @import sp grDevices graphics stats utils
+#' @import sp grDevices graphics stats utils rgdal
 #' 
 #' @export
 #' 

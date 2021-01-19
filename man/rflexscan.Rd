@@ -22,7 +22,8 @@ rflexscan(
   simcount = 999,
   rantype = "MULTINOMIAL",
   comments = "",
-  verbose = FALSE
+  verbose = FALSE,
+  secondary = NULL
 )
 }
 \arguments{
@@ -89,6 +90,10 @@ test.}
 \item{comments}{Comments for the analysis which will be written in summary.}
 
 \item{verbose}{Print progress messages.}
+
+\item{secondary}{The number of secondary clusters to be enumerated. If \code{NULL} is 
+specified (default), the search for secondary clusters is stopped when the 
+Monte Carlo p-value reaches 1.}
 }
 \value{
 An \code{rflexscan} object which contains analysis results and specified
