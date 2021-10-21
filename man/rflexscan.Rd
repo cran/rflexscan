@@ -147,7 +147,11 @@ legend("bottomleft", legend = labs, col = palette(), lty = 1)
 
 }
 \references{
-Tango T. and Takahashi K. (2005). A flexibly shaped spatial scan 
+Otani T. and Takahashi K. (2021). Flexible scan statistics for 
+  detecting spatial disease clusters: The rflexscan R package, Journal of 
+  Statistical Software 99:13.
+  
+  Tango T. and Takahashi K. (2005). A flexibly shaped spatial scan 
   statistic for detecting clusters, International Journal of Health 
   Geographics 4:11.
   

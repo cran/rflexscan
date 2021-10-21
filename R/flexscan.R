@@ -16,6 +16,9 @@
 #' 
 #' @references 
 #' \itemize{
+#'   \item Otani T. and Takahashi K. (2021). Flexible scan statistics for 
+#'   detecting spatial disease clusters: The rflexscan R package, Journal of 
+#'   Statistical Software 99:13.
 #'   \item Tango T. and Takahashi K. (2005). A flexibly shaped spatial scan 
 #'   statistic for detecting clusters, International Journal of Health
 #'   Geographics 4:11.
@@ -178,6 +181,10 @@ flexscan.rantype <- c("MULTINOMIAL", "POISSON")
 #' legend("bottomleft", legend = labs, col = palette(), lty = 1)
 #' 
 #' @references
+#'   Otani T. and Takahashi K. (2021). Flexible scan statistics for 
+#'   detecting spatial disease clusters: The rflexscan R package, Journal of 
+#'   Statistical Software 99:13.
+#'   
 #'   Tango T. and Takahashi K. (2005). A flexibly shaped spatial scan 
 #'   statistic for detecting clusters, International Journal of Health 
 #'   Geographics 4:11.
@@ -661,7 +668,7 @@ plot.rflexscan <- function(x,
 #' choropleth(sids.shp, fls, pval = 0.05)
 #' }
 #' 
-#' @import sp grDevices graphics stats utils rgdal
+#' @import sp grDevices graphics stats utils
 #' 
 #' @export
 #' 
