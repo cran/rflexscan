@@ -57,6 +57,11 @@ double  R_EARTH = 6370;
 int   SECONDARY = INT_MAX; /* number of secondary clusters */
 bool  ENUM_SECONDARY = false;
 
+#define HOT 1
+#define COLD 2
+#define BOTH 3
+int CLUSTERTYPE = 0;
+
 int     K = 15;         /* maximum length of connected areas */
 int		K2;
 int     N;              /* number of all areas */
@@ -112,6 +117,10 @@ double  **minmZ;        /* mimmZ[0..SIMCOUNT][0..snG[s]] */
 int     *minmZ_zlength;
 areaidx **minmZ_z;
 
+double  **maxmZ;        /* maxmZ[0..SIMCOUNT][0..snG[s]] */
+int     *maxmZ_zlength;
+areaidx **maxmZ_z;
+
 int     MLC_zlength;
 areaidx *MLC_z;
 
@@ -125,6 +134,7 @@ short   *masksw;
 
 /* for LLR with restriction */
 double	**pv0;			/* pv0[0..N-1][0..SIMCOUNT] */
+double	**pv0L;			/* pv0c[0..N-1][0..SIMCOUNT] */
 
 double	*Lpoi0;
 
@@ -133,6 +143,7 @@ double	*Lbin0;
 
 /* missing */
 int		misarea;
+
 
 /*---------------------------------------------------------------------------------*/
 /* Sort maxstat[] in descending sequence */
@@ -238,64 +249,20 @@ double p_nor(double z) {
   };
 }
 /*---------------------------------------------------------------------------------*/
-/* n! */
-double kaijo(int n) {
-  int		s;
-  double	tt;
-  
-  if (n == 0) {
-    return 1.0;
-  } else {
-    tt = 0;
-    for (s = 1; s <= n; ++s)
-      tt += (double)log((double)s);
-    return(exp(tt));
-  };
-}
-/*---------------------------------------------------------------------------------*/
-/* Peizer & Platt No.2 for Poisson */
-double pplattP(int xx, double lambda) {
-  double	x2, d1, d2, u2;
-  
-  
-  x2 = (double)xx + 0.5;
-  d1 = x2 - lambda + (1.0 / 6.0);
-  d2 = d1 + 0.02 / (double)(xx + 1);
-  u2 = (d2 / (fabs(x2 - lambda))) * sqrt(2.0 * x2 * log(x2 / lambda) + 2.0 * (lambda - x2));
-  
-  return(p_nor(u2));
-}
-/*---------------------------------------------------------------------------------*/
 /* calculation of Pr{X>x}+0.5Pr{X=x} on Poisson Distribution */
 double Ppfm(int ax, double ex) {
   double tmp0, tmp1;
-  
-  tmp0 = 1 - pplattP(ax, ex);
+
+  tmp0 = 1.0 - R::ppois(ax, ex, true, false);
   
   if (ax > 0)
-    tmp1 = pplattP(ax, ex) - pplattP(ax - 1, ex);
+    tmp1 = R::ppois(ax, ex, true, false) - R::ppois(ax - 1, ex, true, false);
   else
-    tmp1 = pplattP(0, ex);
+    tmp1 = R::ppois(0, ex, true, false);
   
   tmp0 = tmp0 + 0.5 * tmp1;
   
   return tmp0;
-}
-/*---------------------------------------------------------------------------------*/
-/* Peizer & Platt No.2 for Binomial */
-double pplattB(int xx, int bn, double bp) {
-  double	x2, d1, d2, u2, xt0, xt1, xt2;
-  double	bq = 1.0 - bp;
-  
-  x2 = (double)xx + 0.5;
-  d1 = x2 - bn * bp  + (bq - bp) / (6.0);
-  d2 = d1 + 0.02 * ((bq / (double)(xx + 1)) - (bp / (double)(bn - xx)) + ((bq - bp) / (2.0 * (bn + 1))));
-  xt0 = log((double)(x2)) - log((double)(bn * bp));
-  xt1 = log((double)(bn - x2)) - log((double)(bn * bq));
-  xt2 = 2.0 / (1.0 + (1 / (6.0 * bn)));
-  u2 = (d2 / (fabs(x2 - bn * bp))) * sqrt(xt2 * (x2 * xt0 + (bn - x2) * xt1));
-  
-  return(p_nor(u2));
 }
 /*---------------------------------------------------------------------------------*/
 /* calculation of Pr{X>x}+0.5Pr{X=x} on Binomial Distribution */
@@ -305,14 +272,14 @@ double Pbfm(int ax, int bn, double bp) {
   if (ax > bn - 1)
     tmp0 = 0.0;
   else
-    tmp0 = 1 - pplattB(ax, bn, bp);
+    tmp0 = 1 - R::pbinom(ax, bn, bp, true, false);
   
   if (ax > bn - 1) {
-    tmp1 = 1.0 - pplattB(ax - 1, bn, bp);
+    tmp1 = 1.0 - R::pbinom(ax - 1, bn, bp, true, false);
   } else if (ax > 0) {
-    tmp1 = pplattB(ax, bn, bp) - pplattB(ax - 1, bn, bp);
+    tmp1 = R::pbinom(ax, bn, bp, true, false) - R::pbinom(ax - 1, bn, bp, true, false);
   } else {
-    tmp1 = pplattB(0, bn, bp);
+    tmp1 = R::pbinom(0, bn, bp, true, false);
   };
   
   tmp0 = tmp0 + 0.5 * tmp1;
@@ -327,32 +294,62 @@ double Pbfm(int ax, int bn, double bp) {
 void	CalcLambda0s() {
   int     s;
   int     nZ1, nZ0;
+  int     nC0;
   double  c1, c2, c3, lambda, nGf, mGf, nZf, mZf;
   
   nZ0 = -1;
+  nC0 = -1;
   for (s = 0; s <= SIM; ++s) {
     nGf = (double)nG[s];
     mGf = (double)mG;
     c3 = log(nGf / mGf) * nGf;
     maxstat[s] = 0;
-    for (nZ1 = 1; nZ1 <= nG[s]; ++nZ1) {
-      if (minmZ[s][nZ1] == mG)
-        continue;
-      mZf = (double)minmZ[s][nZ1];
-      nZf = (double)nZ1;
-      c1 = nZf / mZf;
-      c2 = (nGf - nZf) / (mGf - mZf);
-      if (c1 > c2) {
-        c1 = log(c1) * nZf;
-        c2 = (c2 == 0) ? 0 : log(c2) * (nGf - nZf);
-        lambda = c1 + c2 - c3;
-        if (lambda > maxstat[s]) {
-          maxstat[s] = lambda;
-          if (s == 0)
-            nZ0 = nZ1;
+    
+    if (CLUSTERTYPE == HOT || CLUSTERTYPE == BOTH) {
+      for (nZ1 = 1; nZ1 <= nG[s]; ++nZ1) {
+        if (minmZ[s][nZ1] == mG)
+          continue;
+        mZf = (double)minmZ[s][nZ1];
+        nZf = (double)nZ1;
+        c1 = nZf / mZf;
+        c2 = (nGf - nZf) / (mGf - mZf);
+        if (c1 > c2) {
+          c1 = log(c1) * nZf;
+          c2 = (c2 == 0) ? 0 : log(c2) * (nGf - nZf);
+          lambda = c1 + c2 - c3;
+          if (lambda > maxstat[s]) {
+            maxstat[s] = lambda;
+            if (s == 0) {
+              nZ0 = nZ1;
+              nC0 = HOT;
+            }
+          };
         };
       };
-    };
+    }
+
+    if (CLUSTERTYPE == COLD || CLUSTERTYPE == BOTH) {
+      for (nZ1 = 1; nZ1 <= nG[s]; ++nZ1) {
+        if (maxmZ[s][nZ1] == 0)
+          continue;
+        mZf = (double)maxmZ[s][nZ1];
+        nZf = (double)nZ1;
+        c1 = nZf / mZf;
+        c2 = (nGf - nZf) / (mGf - mZf);
+        if (c1 < c2) {
+          c1 = log(c1) * nZf;
+          c2 = (c2 == 0) ? 0 : log(c2) * (nGf - nZf);
+          lambda = c1 + c2 - c3;
+          if (lambda > maxstat[s]) {
+            maxstat[s] = lambda;
+            if (s == 0) {
+              nZ0 = nZ1;
+              nC0 = COLD;
+            }
+          };
+        };
+      };
+    }
   };
   
   if (nZ0 == (-1)) {
@@ -360,12 +357,21 @@ void	CalcLambda0s() {
     return;
   };
   
-  lkc.z_length = minmZ_zlength[nZ0];
-  for (s = 0; s < lkc.z_length; ++s)
-    lkc.z[s] = minmZ_z[nZ0][s];
-  lkc.lambda = maxstat[0];
-  lkc.nZ = nZ0;
-  lkc.mZ = minmZ[0][nZ0];
+  if (nC0 == HOT) {
+    lkc.z_length = minmZ_zlength[nZ0];
+    for (s = 0; s < lkc.z_length; ++s)
+      lkc.z[s] = minmZ_z[nZ0][s];
+    lkc.lambda = maxstat[0];
+    lkc.nZ = nZ0;
+    lkc.mZ = minmZ[0][nZ0];
+  } else {
+    lkc.z_length = maxmZ_zlength[nZ0];
+    for (s = 0; s < lkc.z_length; ++s)
+      lkc.z[s] = maxmZ_z[nZ0][s];
+    lkc.lambda = maxstat[0];
+    lkc.nZ = nZ0;
+    lkc.mZ = maxmZ[0][nZ0];
+  }
   
   qsort((void *)(&lkc.z[0]), lkc.z_length, sizeof(lkc.z[0]), sort_func1);
 }
@@ -389,6 +395,15 @@ void FlexibleScan0s(int zlen) {
         for (i = 0; i < zlen; ++i)
           minmZ_z[nZ[s]][i] = z[i];
         minmZ_zlength[nZ[s]] = zlen;
+      };
+    };
+    
+    if (mZ > maxmZ[s][nZ[s]]) {
+      maxmZ[s][nZ[s]] = mZ;
+      if (s == 0) {
+        for (i = 0; i < zlen; ++i)
+          maxmZ_z[nZ[s]][i] = z[i];
+        maxmZ_zlength[nZ[s]] = zlen;
       };
     };
   };
@@ -463,6 +478,15 @@ void	CircularScan0s(int zlen) {
         minmZ_zlength[nZ[s]] = zlen;
       };
     };
+    
+    if (mZ > maxmZ[s][nZ[s]]) {
+      maxmZ[s][nZ[s]] = mZ;
+      if (s == 0) {
+        for (i = 0; i < zlen; ++i)
+          maxmZ_z[nZ[s]][i] = w[i];
+        maxmZ_zlength[nZ[s]] = zlen;
+      };
+    };
   };
   
   if (zlen == K2)
@@ -497,7 +521,6 @@ void FlexibleScan1s(int zlen, int ss) {
     return;
   
   /* check lambda */
-  
   if (mZ < minmZ[s][nZ[s]]) {
     minmZ[s][nZ[s]] = mZ;
     if (s == 0) {
@@ -507,6 +530,15 @@ void FlexibleScan1s(int zlen, int ss) {
     };
   };
   
+  if (mZ > maxmZ[s][nZ[s]]) {
+    maxmZ[s][nZ[s]] = mZ;
+    if (s == 0) {
+      for (i = 0; i < zlen; ++i)
+        maxmZ_z[nZ[s]][i] = z[i];
+      maxmZ_zlength[nZ[s]] = zlen;
+    };
+  };
+
   if (zlen == 1) {
     for (i = 0; i < N; ++i)
       masksw[i] = -2;
@@ -541,8 +573,22 @@ void FlexibleScan1s(int zlen, int ss) {
     mZ += popul[r];
     nZ[s] += cases[r][s];
     
-    if (pv0[r][s] < RALPHA)
-      FlexibleScan1s(zlen + 1, s);
+    switch (CLUSTERTYPE) {
+    case HOT:
+      if (pv0[r][s] < RALPHA)
+        FlexibleScan1s(zlen + 1, s);
+      break;
+    case COLD:
+      if (pv0L[r][s] < RALPHA)
+        FlexibleScan1s(zlen + 1, s);
+      break;
+    case BOTH:
+      if (pv0[r][s] < RALPHA)
+        FlexibleScan1s(zlen + 1, s);
+      else if (pv0L[r][s] < RALPHA)
+        FlexibleScan1s(zlen + 1, s);
+      break;
+    }
     
     mZ = mZbak;
     nZ[s] -= cases[r][s];
@@ -576,6 +622,15 @@ void	CircularScan1s(int zlen, int ss) {
     };
   };
   
+  if (mZ > maxmZ[s][nZ[s]]) {
+    maxmZ[s][nZ[s]] = mZ;
+    if (s == 0) {
+      for (i = 0; i < zlen; ++i)
+        maxmZ_z[nZ[s]][i] = w[i];
+      maxmZ_zlength[nZ[s]] = zlen;
+    };
+  };
+  
   if (zlen == K2)
     return;
   
@@ -584,8 +639,22 @@ void	CircularScan1s(int zlen, int ss) {
   mZ += popul[r];
   nZ[s] += cases[r][s];
   
-  if (pv0[r][s] < RALPHA)
-    CircularScan1s(zlen + 1, s);
+  switch (CLUSTERTYPE) {
+  case HOT:
+    if (pv0[r][s] < RALPHA)
+      CircularScan1s(zlen + 1, s);
+    break;
+  case COLD:
+    if (pv0L[r][s] < RALPHA)
+      CircularScan1s(zlen + 1, s);
+    break;
+  case BOTH:
+    if (pv0[r][s] < RALPHA)
+      CircularScan1s(zlen + 1, s);
+    else if (pv0L[r][s] < RALPHA)
+      CircularScan1s(zlen + 1, s);
+    break;
+  }
   
   mZ = mZbak;
   nZ[s] -= cases[r][s];
@@ -608,6 +677,32 @@ double calcstatP0(int bnZ, double bmZ, int bnG, double bmG) {
   
   return(plmb);
 }
+
+
+double (* calcstatP0Func)(double, double, double, double, double);
+
+double calcstatP0Hot(double nZ, double mZ, double nG, double mG, double Lpoi0) {
+  if ((nZ / mZ) > ((nG - nZ) / (mG - mZ)))
+    return calcstatP0(nZ, mZ, nG, mG) - Lpoi0;
+  else
+    return 0;
+}
+
+double calcstatP0Cold(double nZ, double mZ, double nG, double mG, double Lpoi0) {
+  if ((nZ / mZ) < ((nG - nZ) / (mG - mZ)))
+    return calcstatP0(nZ, mZ, nG, mG) - Lpoi0;
+  else
+    return 0;
+}
+
+double calcstatP0Both(double nZ, double mZ, double nG, double mG, double Lpoi0) {
+  if ((nZ / mZ) != ((nG - nZ) / (mG - mZ)))
+    return calcstatP0(nZ, mZ, nG, mG) - Lpoi0;
+  else
+    return 0;
+}
+
+
 /*---------------------------------------------------------------------------------*/
 void FlexibleScan0l(int zlen) {
   short int i, j;
@@ -623,10 +718,7 @@ void FlexibleScan0l(int zlen) {
     return;
   
   for (s = 0; s <= SIM; ++s) {
-    if ((nZ[s] / mZ) > ((nG[s] - nZ[s]) / (mG - mZ)))
-      st0 = calcstatP0(nZ[s], mZ, nG[s], mG) - Lpoi0[s];
-    else
-      st0 = 0;
+    st0 = calcstatP0Func(nZ[s], mZ, nG[s], mG, Lpoi0[s]);
     if (st0 > maxstat[s]) {
       maxstat[s] = st0;
       if (s == 0) {
@@ -700,10 +792,7 @@ void	CircularScan0l(int zlen) {
     return;
   
   for (s = 0; s <= SIM; ++s) {
-    if ((nZ[s] / mZ) > ((nG[s] - nZ[s]) / (mG - mZ)))
-      st0 = calcstatP0(nZ[s], mZ, nG[s], mG) - Lpoi0[s];
-    else
-      st0 = 0;
+    st0 = calcstatP0Func(nZ[s], mZ, nG[s], mG, Lpoi0[s]);
     if (st0 > maxstat[s]) {
       maxstat[s] = st0;
       if (s == 0) {
@@ -747,10 +836,7 @@ void FlexibleScan1l(int zlen, int ss) {
   if (detectedarea[z[zlen-1]] != 0)
     return;
   
-  if ((nZ[s] / mZ) > ((nG[s] - nZ[s]) / (mG - mZ)))
-    st0 = calcstatP0(nZ[s], mZ, nG[s], mG) - Lpoi0[s];
-  else
-    st0 = 0;
+  st0 = calcstatP0Func(nZ[s], mZ, nG[s], mG, Lpoi0[s]);
   if (st0 > maxstat[s]) {
     maxstat[s] = st0;
     if (s == 0) {
@@ -793,8 +879,22 @@ void FlexibleScan1l(int zlen, int ss) {
     nZ[s] += cases[r][s];
     
     /* reentrant */
-    if (pv0[r][s] < RALPHA)
-      FlexibleScan1l(zlen + 1, s);
+    switch (CLUSTERTYPE) {
+    case HOT:
+      if (pv0[r][s] < RALPHA)
+        FlexibleScan1l(zlen + 1, s);
+      break;
+    case COLD:
+      if (pv0L[r][s] < RALPHA)
+        FlexibleScan1l(zlen + 1, s);
+      break;
+    case BOTH:
+      if (pv0[r][s] < RALPHA)
+        FlexibleScan1l(zlen + 1, s);
+      else if (pv0L[r][s] < RALPHA)
+        FlexibleScan1l(zlen + 1, s);
+      break;
+    }
     
     mZ = mZbak;
     nZ[s] -= cases[r][s];
@@ -820,10 +920,7 @@ void	CircularScan1l(int zlen, int ss) {
   if (detectedarea[w[zlen-1]] != 0)
     return;
   
-  if ((nZ[s] / mZ) > ((nG[s] - nZ[s]) / (mG - mZ)))
-    st0 = calcstatP0(nZ[s], mZ, nG[s], mG) - Lpoi0[s];
-  else
-    st0 = 0;
+  st0 = calcstatP0Func(nZ[s], mZ, nG[s], mG, Lpoi0[s]);
   if (st0 > maxstat[s]) {
     maxstat[s] = st0;
     if (s == 0) {
@@ -841,8 +938,22 @@ void	CircularScan1l(int zlen, int ss) {
   mZ += popul[r];
   nZ[s] += cases[r][s];
   
-  if (pv0[r][s] < RALPHA)
-    CircularScan1l(zlen + 1, s);
+  switch (CLUSTERTYPE) {
+  case HOT:
+    if (pv0[r][s] < RALPHA)
+      CircularScan1l(zlen + 1, s);
+    break;
+  case COLD:
+    if (pv0L[r][s] < RALPHA)
+      CircularScan1l(zlen + 1, s);
+    break;
+  case BOTH:
+    if (pv0[r][s] < RALPHA)
+      CircularScan1l(zlen + 1, s);
+    else if (pv0L[r][s] < RALPHA)
+      CircularScan1l(zlen + 1, s);
+    break;
+  }
   
   mZ = mZbak;
   nZ[s] -= cases[r][s];
@@ -873,6 +984,31 @@ double calcstatB0(int bnZ, double bmZ, int bnG, double bmG) {
   
   return(blmb);
 }
+
+
+double (* calcstatB0Func)(double, double, double, double, double);
+
+double calcstatB0Hot(double nZ, double mZ, double nG, double mG, double Lbin0) {
+  if ((nZ / mZ) > ((nG - nZ) / (mG - mZ)))
+    return calcstatB0(nZ, mZ, nG, mG) - Lbin0;
+  else
+    return 0;
+}
+
+double calcstatB0Cold(double nZ, double mZ, double nG, double mG, double Lbin0) {
+  if ((nZ / mZ) < ((nG - nZ) / (mG - mZ)))
+    return calcstatB0(nZ, mZ, nG, mG) - Lbin0;
+  else
+    return 0;
+}
+
+double calcstatB0Both(double nZ, double mZ, double nG, double mG, double Lbin0) {
+  if ((nZ / mZ) != ((nG - nZ) / (mG - mZ)))
+    return calcstatB0(nZ, mZ, nG, mG) - Lbin0;
+  else
+    return 0;
+}
+
 /*---------------------------------------------------------------------------------*/
 void FlexibleScanB0(int zlen) {
   short int i, j;
@@ -888,10 +1024,7 @@ void FlexibleScanB0(int zlen) {
     return;
   
   for (s = 0; s <= SIM; ++s) {
-    if ((nZ[s] / mZ) > ((nG[s] - nZ[s]) / (mG - mZ)))
-      st0 = calcstatB0(nZ[s], mZ, nG[s], mG) - Lbin0[s];
-    else
-      st0 = 0;
+    st0 = calcstatB0Func(nZ[s], mZ, nG[s], mG, Lbin0[s]);
     if (st0 > maxstat[s]) {
       maxstat[s] = st0;
       if (s == 0) {
@@ -964,10 +1097,7 @@ void	CircularScanB0(int zlen) {
     return;
   
   for (s = 0; s <= SIM; ++s) {
-    if ((nZ[s] / mZ) > ((nG[s] - nZ[s]) / (mG - mZ)))
-      st0 = calcstatB0(nZ[s], mZ, nG[s], mG) - Lbin0[s];
-    else
-      st0 = 0;
+    st0 = calcstatB0Func(nZ[s], mZ, nG[s], mG, Lbin0[s]);
     if (st0 > maxstat[s]) {
       maxstat[s] = st0;
       if (s == 0) {
@@ -1012,10 +1142,7 @@ void FlexibleScanB1(int zlen, int ss) {
   if (detectedarea[z[zlen-1]] != 0)
     return;
   
-  if ((nZ[s] / mZ) > ((nG[s] - nZ[s]) / (mG - mZ)))
-    st0 = calcstatB0(nZ[s], mZ, nG[s], mG) - Lbin0[s];
-  else
-    st0 = 0;
+  st0 = calcstatB0Func(nZ[s], mZ, nG[s], mG, Lbin0[s]);
   if (st0 > maxstat[s]) {
     maxstat[s] = st0;
     if (s == 0) {
@@ -1058,8 +1185,22 @@ void FlexibleScanB1(int zlen, int ss) {
     nZ[s] += cases[r][s];
     
     /* reentrant */
-    if (pv0[r][s] < RALPHA)
-      FlexibleScanB1(zlen + 1, s);
+    switch (CLUSTERTYPE) {
+    case HOT:
+      if (pv0[r][s] < RALPHA)
+        FlexibleScanB1(zlen + 1, s);
+      break;
+    case COLD:
+      if (pv0L[r][s] < RALPHA)
+        FlexibleScanB1(zlen + 1, s);
+      break;
+    case BOTH:
+      if (pv0[r][s] < RALPHA)
+        FlexibleScanB1(zlen + 1, s);
+      else if (pv0L[r][s] < RALPHA)
+        FlexibleScanB1(zlen + 1, s);
+      break;
+    }
     
     mZ = mZbak;
     nZ[s] -= cases[r][s];
@@ -1085,10 +1226,7 @@ void	CircularScanB1(int zlen, int ss) {
   if (detectedarea[w[zlen-1]] != 0)
     return;
   
-  if ((nZ[s] / mZ) > ((nG[s] - nZ[s]) / (mG - mZ)))
-    st0 = calcstatB0(nZ[s], mZ, nG[s], mG) - Lbin0[s];
-  else
-    st0 = 0;
+  st0 = calcstatB0Func(nZ[s], mZ, nG[s], mG, Lbin0[s]);
   if (st0 > maxstat[s]) {
     maxstat[s] = st0;
     if (s == 0) {
@@ -1106,8 +1244,23 @@ void	CircularScanB1(int zlen, int ss) {
   mZ += popul[r];
   nZ[s] += cases[r][s];
   
-  if (pv0[r][s] < RALPHA)
-    CircularScanB1(zlen + 1, s);
+  /* reentrant */
+  switch (CLUSTERTYPE) {
+  case HOT:
+    if (pv0[r][s] < RALPHA)
+      CircularScanB1(zlen + 1, s);
+    break;
+  case COLD:
+    if (pv0L[r][s] < RALPHA)
+      CircularScanB1(zlen + 1, s);
+    break;
+  case BOTH:
+    if (pv0[r][s] < RALPHA)
+      CircularScanB1(zlen + 1, s);
+    else if (pv0L[r][s] < RALPHA)
+      CircularScanB1(zlen + 1, s);
+    break;
+  }
   
   mZ = mZbak;
   nZ[s] -= cases[r][s];
@@ -1133,10 +1286,13 @@ List	FlexScan() {
   
   List retval;
   
-  if (MODEL == 0 && lors == 0)
-    for (i = 0; i <= nGmax; ++i)
+  if (MODEL == 0 && lors == 0) {
+    for (i = 0; i <= nGmax; ++i) {
       minmZ_zlength[i] = 0;
-  
+      maxmZ_zlength[i] = 0;
+    }
+  }
+
   for (phase = 0; phase <= SECONDARY; ++phase) {
     if (phase == 0) {
       SIM = SIMCOUNT;
@@ -1147,9 +1303,12 @@ List	FlexScan() {
     }
     
     if (MODEL == 0 && lors == 0) {
-      for (s = 0; s <= SIM; ++s)
-        for (i = 0; i <= nGmax; ++i)
+      for (s = 0; s <= SIM; ++s) {
+        for (i = 0; i <= nGmax; ++i) {
           minmZ[s][i] = mG;
+          maxmZ[s][i] = 0;
+        }
+      }
     }
     
     for (s = 0; s <= SIM; ++s)
@@ -1485,6 +1644,18 @@ int     LoadData(const NumericMatrix &case_mat,
       Rcpp::stop("ERROR! Code:", ErrMemory);
     }
   }
+  
+  /* pv0L[i][s] */
+  if ((pv0L = (double **)calloc(N, sizeof(double *))) == NULL) {
+    Rprintf("ErrMemory - pv0L");
+    Rcpp::stop("ERROR! Code:", ErrMemory);
+  }
+  for (i = 0; i < N; ++i) {
+    if ((pv0L[i] = (double *)calloc(SIMCOUNT + 1, sizeof(double))) == NULL) {
+      Rprintf("ErrMemory -- pv0L");
+      Rcpp::stop("ERROR! Code:", ErrMemory);
+    }
+  }
     
   /* nG[0..SIMCOUNT] */
   if ((nG = (int *)calloc(SIMCOUNT + 1, sizeof(int))) == NULL) {
@@ -1640,6 +1811,38 @@ int     LoadData(const NumericMatrix &case_mat,
           Rcpp::stop("ERROR! Code:", ErrMemory);
         }
       }
+      
+      
+      /* maxmZ_zlength[nGmax] */
+      if ((maxmZ_zlength = (int *)calloc(nGmax + 1, sizeof(int))) == NULL) {
+        Rprintf("ErrMemory - maxmZ_zlength");
+        Rcpp::stop("ERROR! Code:", ErrMemory);
+      }
+      
+      /* maxmZ_z[0..nGmax][K-1] */
+      if ((maxmZ_z = (areaidx **)calloc(nGmax + 1, sizeof(areaidx *))) == NULL) {
+        Rprintf("ErrMemory -- maxmZ_z");
+        Rcpp::stop("ERROR! Code:", ErrMemory);
+      }
+      for (i = 0; i <= nGmax; ++i) {
+        if ((maxmZ_z[i] = (areaidx *)calloc(K, sizeof(areaidx))) == NULL) {
+          Rprintf("ErrMemory -- maxmZ_z[i]");
+          Rcpp::stop("ERROR! Code:", ErrMemory);
+        }
+      }
+      
+      /* *minmZ[0..SIMCOUNT] */
+      if ((maxmZ = (double **)calloc(SIMCOUNT + 1, sizeof(double *))) == NULL) {
+        Rprintf("ErrMemory -- maxmZ");
+        Rcpp::stop("ERROR! Code:", ErrMemory);
+      }
+      /* minmZ[0..SIMCOUNT][0..snG] */
+      for (i = 0; i <= SIMCOUNT; ++i) {
+        if ((maxmZ[i] = (double *)calloc(nGmax + 1, sizeof(double))) == NULL) {
+          Rprintf("ErrMemory -- maxmZ[i]");
+          Rcpp::stop("ERROR! Code:", ErrMemory);
+        }
+      }
     } else {
       if ((MLC_z = (areaidx *)calloc(K, sizeof(areaidx))) == NULL) {
         Rprintf("ErrMemory - MLC_z");
@@ -1711,6 +1914,11 @@ void FreeData(void) {
     free(pv0[i]);
   }
   free(pv0);
+  
+  for (i = 0; i < N; ++i) {
+    free(pv0L[i]);
+  }
+  free(pv0L);
     
   free(nG);
 
@@ -1719,16 +1927,21 @@ void FreeData(void) {
   if (MODEL == 0) {
     if (lors == 0) {
       free(minmZ_zlength);
+      free(maxmZ_zlength);
       
       for (i = 0; i <= nGmax; ++i) {
         free(minmZ_z[i]);
+        free(maxmZ_z[i]);
       }
       free(minmZ_z);
+      free(maxmZ_z);
       
       for (i = 0; i <= SIMCOUNT; ++i) {
         free(minmZ[i]);
+        free(maxmZ[i]);
       }
       free(minmZ);
+      free(maxmZ);
     } else {
       free(MLC_z);
       free(Lpoi0);      
@@ -1781,7 +1994,23 @@ List runFleXScan(const List &setting,
   } else {
     ENUM_SECONDARY = true;
   }
+
+  CLUSTERTYPE = setting["clustertype"];
   
+  switch(CLUSTERTYPE) {
+    case HOT:
+      calcstatP0Func = calcstatP0Hot;
+      calcstatB0Func = calcstatB0Hot;
+      break;
+    case COLD:
+      calcstatP0Func = calcstatP0Cold;
+      calcstatB0Func = calcstatB0Cold;
+      break;
+    default:
+      calcstatP0Func = calcstatP0Both;
+      calcstatB0Func = calcstatB0Both;
+  }
+
   Rprintf("<STATISTICAL MODEL>\n");
   Rprintf(" %s.\n", (MODEL == 1) ? "Binomial" : "Poisson");
   Rprintf("<SCANING METHOD>\n");
@@ -1794,6 +2023,17 @@ List runFleXScan(const List &setting,
   else
     Rprintf("\n");
   Rprintf("<SETTINGS>\n");
+  switch (CLUSTERTYPE) {
+  case HOT:
+    Rprintf(" Cluster type = Hot-spot.\n");
+    break;
+  case COLD:
+    Rprintf(" Cluster type = Cold-spot.\n");
+    break;
+  case BOTH:
+    Rprintf(" Cluster type = Both.\n");
+    break;
+  }
   Rprintf(" Maximum area length = %d.\n", K);
   Rprintf(" Number of simulation = %d.\n", SIMCOUNT);
   Rprintf(" Random number = %s.\n", (RANTYPE == 0) ? "Multinomial" : ((MODEL == 0) ? "Poisson" : "Binomial"));
@@ -1819,6 +2059,7 @@ List runFleXScan(const List &setting,
         if (detectedarea[i] != -1)
           for (s = 0; s <= SIM2; ++s) {
             pv0[i][s] = Ppfm(cases[i][s], popul[i]);
+            pv0L[i][s] = 1.0 - Ppfm(cases[i][s] - 1, popul[i]);
           }
       }
     }
@@ -1829,6 +2070,7 @@ List runFleXScan(const List &setting,
         if (detectedarea[i] != -1)
           for (s = 0; s <= SIM2; ++s) {
             pv0[i][s] = Pbfm(cases[i][s], (int)popul[i], totp);
+            pv0L[i][s] = 1.0 - Pbfm(cases[i][s] - 1, (int)popul[i], totp);
           }
       }
     }

@@ -146,6 +146,14 @@ flexscan.rantype <- c("MULTINOMIAL", "POISSON")
 #' specified (default), the search for secondary clusters is stopped when the 
 #' Monte Carlo p-value reaches 1.
 #' 
+#' @param clustertype
+#' Type of cluster to be scanned.
+#' \describe{
+#'   \item{"HOT"}{Hot-spot clusters with elevated risk.}
+#'   \item{"COLD"}{Cold-spot clusters with reduced risk.}
+#'   \item{"BOTH"}{Hot- and cold-spot clusters simultaneously.}
+#' }
+#' 
 #' @return 
 #' An \code{rflexscan} object which contains analysis results and specified
 #' parameters.
@@ -213,7 +221,8 @@ rflexscan <- function(x, y, lat, lon,
                       rantype="MULTINOMIAL",
                       comments="",
                       verbose=FALSE,
-                      secondary=NULL) {
+                      secondary=NULL,
+                      clustertype="HOT") {
   call <- match.call()
 
   stattype <- match.arg(toupper(stattype), flexscan.stattype)
@@ -277,7 +286,17 @@ rflexscan <- function(x, y, lat, lon,
   setting$simcount <- simcount
   setting$rantype <- as.integer(rantype == "POISSON")
   setting$secondary <- ifelse(is.null(secondary), -1, secondary)
-      
+
+  if (toupper(clustertype) == "HOT") {
+    setting$clustertype = 1
+  } else if (toupper(clustertype) == "COLD") {
+    setting$clustertype = 2
+  } else if (toupper(clustertype) == "BOTH") {
+    setting$clustertype = 3
+  } else {
+    setting$clustertype = 1
+  }
+  
   if (!verbose) {
     output <- capture.output({
       start <- date()
@@ -307,6 +326,16 @@ rflexscan <- function(x, y, lat, lon,
   setting$scanmethod <- scanmethod
   setting$cartesian <- !latlon
   setting$rantype <- rantype
+  
+  if (toupper(clustertype) == "HOT") {
+    setting$clustertype = "HOT"
+  } else if (toupper(clustertype) == "COLD") {
+    setting$clustertype = "COLD"
+  } else if (toupper(clustertype) == "BOTH") {
+    setting$clustertype = "BOTH"
+  } else {
+    setting$clustertype = "HOT"
+  }
   
   input <- list()
   input$coordinates <- coordinates
@@ -487,7 +516,8 @@ print.summary.rflexscan <- function(x, ...) {
   }
   cat("Model:", x$setting$model, "\n")
   cat("Scanning method:", x$setting$scanmethod, "\n")
-  cat("Statistic type:", x$setting$stattype, "\n\n")
+  cat("Statistic type:", x$setting$stattype, "\n")
+  cat("Cluster type:", x$setting$clustertype, "\n\n")
 }
   
 
@@ -642,10 +672,10 @@ plot.rflexscan <- function(x,
 #' @examples
 #' \donttest{
 #' # load sample data (North Carolina SIDS data)
-#' library(rgdal)
+#' library(sf)
 #' library(spdep)
 #' data("nc.sids")
-#' sids.shp <- readOGR(system.file("shapes/sids.shp", package="spData")[1])
+#' sids.shp <- read_sf(system.file("shapes/sids.shp", package="spData")[1])
 #' 
 #' # calculate the expected numbers of cases
 #' expected <- nc.sids$BIR74 * sum(nc.sids$SID74) / sum(nc.sids$BIR74)
@@ -668,7 +698,7 @@ plot.rflexscan <- function(x,
 #' choropleth(sids.shp, fls, pval = 0.05)
 #' }
 #' 
-#' @import sp grDevices graphics stats utils
+#' @import grDevices graphics stats utils sf
 #' 
 #' @export
 #' 
@@ -692,6 +722,6 @@ choropleth <- function(polygons,
     index[fls$cluster[[i]]$area] <- i
   }
   index[index == 0 | index > length(col)] <- length(col)
-  plot(polygons, col = col[index], lwd = 0.1, ...)
+  plot(st_geometry(polygons), col = col[index], lwd = 0.1, ...)
   box()
 }
