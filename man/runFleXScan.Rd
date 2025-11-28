@@ -15,6 +15,9 @@ runFleXScan(setting, case_mat, coord_mat, adj_mat)
 
 \item{adj_mat}{A matrix of neighbourhood relationships.}
 }
+\value{
+A list containing the detected clusters, test statistics, and Monte Carlo p-values.
+}
 \description{
 Run main routine of FleXScan.
 }

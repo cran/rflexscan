@@ -1,3 +1,8 @@
+# rflexscan 1.2.0
+
+* Added `clusterradius` argument specifying the maximum radius of cluster.
+* Updated example code to reflect the update of the spData package.
+
 # rflexscan 1.1.0
 
 * Added option for scannning cold-spot cluster with decreased risk.
@@ -5,7 +10,7 @@
 
 # rflexscan 1.0.0
 
-* Added reference to the Journal of Statistical Software paper on rflexscan \doi{10.18637/jss.v099.i13}.
+* Added reference to the Journal of Statistical Software paper on rflexscan <doi:10.18637/jss.v099.i13>.
 
 # rflexscan 0.4.0
 

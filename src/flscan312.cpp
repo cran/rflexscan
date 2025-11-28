@@ -4,12 +4,7 @@ using namespace Rcpp;
 /* #pragma inline */
 
 #include <stdlib.h>
-//#include <stdio.h>
 #include <math.h>
-#include <time.h>
-#include <memory.h>
-#include <string.h>
-//#pragma hdrstop
 
 #define ErrMemory (1)
 #define ErrFile0 (2)
@@ -65,6 +60,7 @@ int CLUSTERTYPE = 0;
 int     K = 15;         /* maximum length of connected areas */
 int		K2;
 int     N;              /* number of all areas */
+double CLUSTERRADIUS = DBL_MAX; /* maximum radius of connected areas */
 
 areaidx	*w;             /* w[] */
 areaidx	z[KLIM];        /* z[] */
@@ -427,6 +423,10 @@ void FlexibleScan0s(int zlen) {
     /* if already included or finished then skip. */
     if (masksw[caz[i]] != 0) /* -1:included, 1,2,3..:finished */
     continue;
+    
+    if (area[caz[i]].dist > CLUSTERRADIUS)
+      continue;
+    
     /* add an area to z[] */
     z[zlen] = r = caz[i];
     masksw[r] = -1;
@@ -490,6 +490,9 @@ void	CircularScan0s(int zlen) {
   };
   
   if (zlen == K2)
+    return;
+  
+  if (area[w[zlen]].dist > CLUSTERRADIUS)
     return;
   
   r = w[zlen];
@@ -558,6 +561,10 @@ void FlexibleScan1s(int zlen, int ss) {
     /* if already included or finished then skip. */
     if (masksw[caz[i]] != 0) /* -1:included, 1,2,3..:finished */
     continue;
+    
+    if (area[caz[i]].dist > CLUSTERRADIUS)
+      continue;
+    
     /* add an area to z[] */
     z[zlen] = r = caz[i];
     masksw[r] = -1;
@@ -632,6 +639,9 @@ void	CircularScan1s(int zlen, int ss) {
   };
   
   if (zlen == K2)
+    return;
+  
+  if (area[w[zlen]].dist > CLUSTERRADIUS)
     return;
   
   r = w[zlen];
@@ -747,6 +757,10 @@ void FlexibleScan0l(int zlen) {
     /* if already included or finished then skip. */
     if (masksw[caz[i]] != 0) /* -1:included, 1,2,3..:finished */
     continue;
+    
+    if (area[caz[i]].dist > CLUSTERRADIUS)
+      continue;
+    
     /* add an area to z[] */
     z[zlen] = r = caz[i];
     masksw[r] = -1;
@@ -804,6 +818,9 @@ void	CircularScan0l(int zlen) {
   };
   
   if (zlen == K2)
+    return;
+  
+  if (area[w[zlen]].dist > CLUSTERRADIUS)
     return;
   
   r = w[zlen];
@@ -864,6 +881,10 @@ void FlexibleScan1l(int zlen, int ss) {
     /* if already included or finished then skip. */
     if (masksw[caz[i]] != 0) /* -1:included, 1,2,3..:finished */
     continue;
+    
+    if (area[caz[i]].dist > CLUSTERRADIUS)
+      continue;
+    
     /* add an area to z[] */
     z[zlen] = r = caz[i];
     masksw[r] = -1;
@@ -931,6 +952,9 @@ void	CircularScan1l(int zlen, int ss) {
   };
   
   if (zlen == K2)
+    return;
+  
+  if (area[w[zlen]].dist > CLUSTERRADIUS)
     return;
   
   r = w[zlen];
@@ -1968,6 +1992,9 @@ void FreeData(void) {
 //' @param adj_mat
 //' A matrix of neighbourhood relationships.
 //' 
+//' @return
+//' A list containing the detected clusters, test statistics, and Monte Carlo p-values.
+//' 
 //' @export
 // [[Rcpp::export]]
 List runFleXScan(const List &setting,
@@ -1996,6 +2023,7 @@ List runFleXScan(const List &setting,
   }
 
   CLUSTERTYPE = setting["clustertype"];
+  CLUSTERRADIUS = setting["clusterradius"];
   
   switch(CLUSTERTYPE) {
     case HOT:
